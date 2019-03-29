@@ -39,6 +39,9 @@ def train_eval_models(xtrain,
     '''
     Argu: numpy array
     
+    shape of x: [N, D]
+    shape of y: [N, ]
+    
     '''
     
     best_err_ts = []
@@ -136,6 +139,10 @@ def train_eval_models(xtrain,
         
     
     # GBT gradient boosted tree
+    
+    hyper_para_dict = {"n_steps": 150, 
+                       "n_depth": list(range(3, 10))}
+    
     if 'gbt' in model_list:
         tmperr = gbt_train_validate(xtrain, 
                                     ytrain, 
@@ -147,10 +154,16 @@ def train_eval_models(xtrain,
                                     bool_clf, 
                                     path_result, \
                                     path_model +'_gbt.sav', 
-                                    path_pred)
+                                    path_pred,
+                                    hyper_para_dict = hyper_para_dict)
         best_err_ts.append(tmperr)
+        
     
     # Random forest performance
+    
+    hyper_para_dict = {"n_trees": 100, 
+                       "n_depth": 20}
+    
     if 'rf' in model_list:
         tmperr = rf_train_validate(xtrain, 
                                    ytrain, 
@@ -161,8 +174,10 @@ def train_eval_models(xtrain,
                                    bool_clf, 
                                    path_result, 
                                    path_model + '_rf.sav',
-                                   path_pred)
+                                   path_pred,
+                                   hyper_para_dict = hyper_para_dict)
         best_err_ts.append(tmperr)
+        
     
     # XGBoosted extreme gradient boosted
     if 'xgt' in model_list:
@@ -218,19 +233,12 @@ if __name__ == '__main__':
     path_pred = "../results/vol/"
     bool_clf = False
 
-    model_list = ['gbt']
+    model_list = ['rf']
 # 'gbt', 'rf', 'xgt', 'gp', 'bayes', 'enet', 'ridge', 'lasso', 'ewma'
     
     # fix random seed
     np.random.seed(1)
     
-    '''
-    # ----- log
-    
-    path_log_error = "../results/mixture/log_error_mix.txt"
-    path_log_epoch  = "../results/mixture/log_epoch_mix.txt"
-    path_data = "../dataset/bitcoin/double_trx/"
-    '''
     path_data = "../dataset/bitcoin/double_trx/"
     
     # ----- data
@@ -240,16 +248,30 @@ if __name__ == '__main__':
     val_dta = pickle.load(open(path_data + 'val.p', "rb"), encoding = 'latin1')
     ts_dta = pickle.load(open(path_data + 'test.p', "rb"), encoding = 'latin1')
     
-    # output from the reshape 
-    # y [N 1], x [S N T D]    
+    # -- output from the reshape 
+    # y [N 1], x [S N T D]  
+    
+    # N: number of data samples
+    # S: number of sources
+    # T: source-specific timesteps
+    # D: source-specific feature dimensionality at each timestep
     
     tr_x, tr_y = data_reshape(tr_dta)
     val_x, val_y = data_reshape(val_dta)
     ts_x, ts_y = data_reshape(ts_dta)
     
+    # -- data shapes for machine learning models
+    
+    # x: [N S*T*D]
+    # y: [N]
+    
     tr_x = flatten_multi_source_x(tr_x)
     val_x = flatten_multi_source_x(val_x)
     ts_x = flatten_multi_source_x(ts_x)
+    
+    tr_y = tr_y.reshape((len(tr_y),))
+    val_y = val_y.reshape((len(val_y),))
+    ts_y = ts_y.reshape((len(ts_y),))
     
     print('\n shape of training, validation and testing data: \n')
     print(np.shape(tr_x), np.shape(tr_y))
@@ -257,7 +279,7 @@ if __name__ == '__main__':
     print(np.shape(ts_x), np.shape(ts_y))
         
          
-    # train, validate and test models
+    # -- train, validate and test models
     tmp_errors = train_eval_models(tr_x, 
                                    tr_y, 
                                    val_x, 
