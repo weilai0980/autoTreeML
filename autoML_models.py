@@ -1,11 +1,4 @@
 import numpy as np   
-import pandas as pd 
-
-from pandas import *
-from numpy import *
-from scipy import *
- 
-import random
 
 # machine leanring packages
 from sklearn.metrics import accuracy_score
@@ -107,7 +100,7 @@ def utils_evaluation_full_score(x,
     else:
         y_hat = model.predict(x)
         # [rmse, mae, mape]
-        return [sqrt(mean((y_hat - y)**2)), mean(abs(y_hat - y)), mean(abs(y_hat - y)/(y + 1e-10))]      
+        return [np.sqrt(np.mean((y_hat - y)**2)), np.mean(abs(y_hat - y)), np.mean(abs(y_hat - y)/(y + 1e-10))]      
     
             
 def gbt_n_estimatior(maxnum, 
@@ -476,13 +469,13 @@ def rf_train_validate(x_tr,
     
     # save training prediction under the best model
     py = best_model.predict(x_tr)
-    np.savetxt(path_pred + "pytrain_rf.txt", zip(y_tr, py), delimiter=',')
+    np.savetxt(path_pred + "pytrain_rf.txt", list(zip(y_tr, py)), delimiter=',')
     
     # save testing prediction under the best model
-    if len(xtest)!=0:
+    if len(x_test)!=0:
         
         py = best_model.predict(x_test)
-        np.savetxt(path_pred + "pytest_rf.txt", zip(y_test, py), delimiter=',')
+        np.savetxt(path_pred + "pytest_rf.txt", list(zip(y_test, py)), delimiter=',')
         
         result_tuple.append(utils_evaluation_full_score(x_test, y_test, bool_clf, best_model))
     
@@ -555,10 +548,10 @@ def xgt_evaluation_score(xg_tuple,
         y = np.asarray(y)
         
         if bool_full_score == True:
-            return [sqrt(mean((py - y)**2)), mean(abs(py - y)), mean(abs(py - y)/(y + 1e-10))]
+            return [np.sqrt(np.mean((py - y)**2)), np.mean(abs(py - y)), np.mean(abs(py - y)/(y + 1e-10))]
         
         else:
-            return sqrt(mean((py - y)**2))
+            return np.sqrt(np.mean((py - y)**2))
     
 
 def xgt_n_depth(lr, 
@@ -606,11 +599,11 @@ def xgt_n_depth(lr,
 
             param['max_depth'] = depth_trial
             
-            bst  = xgb.train(param, 
+            model  = xgb.train(param, 
                              xg_train, 
                              num_round_trial)
             
-            pred = bst.predict(xg_test)
+            pred = model.predict(xg_test)
             
             if bool_clf == True:
                 
@@ -625,16 +618,16 @@ def xgt_n_depth(lr,
                 
                 if tmp_accur > tmp_err:
                     
-                    best_model = bst
+                    best_model = model
                     best_pytest = pred
                     
                     tmp_err = tmp_accur
             else:
-                tmp_accur = sqrt(mean([(pred[i] - ytest[i])**2 for i in range(len(ytest))])) 
+                tmp_accur = np.sqrt(np.mean([(pred[i] - ytest[i])**2 for i in range(len(ytest))])) 
                 
                 if tmp_accur < tmp_err:
                     
-                    best_model = bst
+                    best_model = model
                     best_pytest = pred
                     
                     tmp_err = tmp_accur
@@ -689,11 +682,11 @@ def xgt_l2(fix_lr,
         
         param['lambda'] = l2_trial
         
-        bst = xgb.train(param, 
+        model = xgb.train(param, 
                         xg_train, 
                         fix_round)
         
-        pred = bst.predict(xg_test)
+        pred = model.predict(xg_test)
         
         if bool_clf == True:
             
@@ -708,15 +701,16 @@ def xgt_l2(fix_lr,
             
             if tmp_accur > tmp_err:
                 
-                best_model = bst
+                best_model = model
                 best_pytest = pred
                     
                 tmp_err = tmp_accur
         else:
-            tmp_accur = sqrt(mean([(pred[i] - ytest[i])**2 for i in range(len(ytest))]))
+            tmp_accur = np.sqrt(np.mean([(pred[i] - ytest[i])**2 for i in range(len(ytest))]))
             
             if tmp_accur < tmp_err:
-                best_model = bst
+                
+                best_model = model
                 best_pytest = pred
                     
                 tmp_err = tmp_accur
@@ -724,7 +718,7 @@ def xgt_l2(fix_lr,
         score.append((l2_trial, tmp_accur))
             
     return min(score, key = lambda x: x[1]) if bool_clf == False else max(score, key = lambda x: x[1]),\
-           best_model, 
+           best_model,\
            xgt_evaluation_score(xg_train, ytrain, bool_clf, best_model, False)
     
     

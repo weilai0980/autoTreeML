@@ -7,26 +7,20 @@ import os
 from utils_libs import *
 from autoML_models import *
 
-# --- parameter set-up from parameter-file ---
+# ----- hyper parameter
 
-'''
-# load the parameter file
-para_dict = para_parser("para_file.txt")
+# -- log
+path_result = "../results/vol/log_error_ml.txt"
+path_model = "../results/vol/"
+path_pred = "../results/vol/"
+path_data = "../dataset/bitcoin/double_trx/"
+bool_clf = False
 
-para_order_minu = para_dict['para_order_minu']
-para_order_hour = para_dict['para_order_hour']
-bool_feature_selection = para_dict['bool_feature_selection']
+model_list = ['rf']
+# 'gbt', 'rf', 'xgt', 'gp', 'bayes', 'enet', 'ridge', 'lasso', 'ewma'
 
-# ONLY USED FOR ROLLING EVALUATION
-interval_len = para_dict['interval_len']
-roll_len = para_dict['roll_len']
 
-para_step_ahead = para_dict['para_step_ahead']
-
-bool_add_feature = True
-'''
-
-# ----
+# -----
 
 
 def train_eval_models(xtrain, 
@@ -66,7 +60,7 @@ def train_eval_models(xtrain,
         best_err_ts.append(tmperr)
     
     
-    # Bayesian regression
+    # -- Bayesian regression
     if 'bayes' in model_list:
         tmperr = bayesian_reg_train_validate(xtrain, 
                                              ytrain, 
@@ -80,7 +74,7 @@ def train_eval_models(xtrain,
                                              path_pred)
         best_err_ts.append(tmperr)
     
-    # ElasticNet
+    # -- ElasticNet
     if 'enet' in model_list:
         tmperr = elastic_net_train_validate(xtrain, 
                                             ytrain, 
@@ -94,7 +88,7 @@ def train_eval_models(xtrain,
                                             path_pred)
         best_err_ts.append(tmperr)
     
-    #Ridge regression
+    # -- Ridge regression
     if 'ridge' in model_list:
         tmperr = ridge_reg_train_validate(xtrain, 
                                           ytrain, 
@@ -108,7 +102,7 @@ def train_eval_models(xtrain,
                                           path_pred)
         best_err_ts.append(tmperr)
     
-    # Lasso 
+    # -- Lasso 
     if 'lasso' in model_list:
         tmperr = lasso_train_validate(xtrain, 
                                       ytrain, 
@@ -138,7 +132,7 @@ def train_eval_models(xtrain,
     '''
         
     
-    # GBT gradient boosted tree
+    # -- GBT gradient boosted tree
     
     hyper_para_dict = {"n_steps": 150, 
                        "n_depth": list(range(3, 10))}
@@ -159,10 +153,10 @@ def train_eval_models(xtrain,
         best_err_ts.append(tmperr)
         
     
-    # Random forest performance
+    # -- Random forest performance
     
-    hyper_para_dict = {"n_trees": 100, 
-                       "n_depth": 20}
+    hyper_para_dict = {"n_trees": 20, 
+                       "n_depth": 5}
     
     if 'rf' in model_list:
         tmperr = rf_train_validate(xtrain, 
@@ -179,7 +173,7 @@ def train_eval_models(xtrain,
         best_err_ts.append(tmperr)
         
     
-    # XGBoosted extreme gradient boosted
+    # -- XGBoosted extreme gradient boosted
     if 'xgt' in model_list:
         tmperr = xgt_train_validate(xtrain, 
                                     ytrain, 
@@ -226,20 +220,8 @@ def flatten_multi_source_x(x):
 
 if __name__ == '__main__':
     
-    
-    # ----- log
-    path_result = "../results/vol/log_error_ml.txt"
-    path_model = "../results/vol/"
-    path_pred = "../results/vol/"
-    bool_clf = False
-
-    model_list = ['rf']
-# 'gbt', 'rf', 'xgt', 'gp', 'bayes', 'enet', 'ridge', 'lasso', 'ewma'
-    
     # fix random seed
     np.random.seed(1)
-    
-    path_data = "../dataset/bitcoin/double_trx/"
     
     # ----- data
     
@@ -279,7 +261,7 @@ if __name__ == '__main__':
     print(np.shape(ts_x), np.shape(ts_y))
         
          
-    # -- train, validate and test models
+    # ----- train, validate and test models
     tmp_errors = train_eval_models(tr_x, 
                                    tr_y, 
                                    val_x, 
@@ -287,6 +269,6 @@ if __name__ == '__main__':
                                    ts_x, 
                                    ts_y)
         
-    print(list(zip(model_list, tmp_errors)))
+    print('\n', list(zip(model_list, tmp_errors)))
     
     
