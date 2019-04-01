@@ -25,7 +25,7 @@ def mape(y,
     
     for idx, val in enumerate(y):
         
-        if abs(val) > 0.00001:
+        if abs(val) > 1e-5:
             tmp_list.append(abs(1.0*(yhat[idx]-val)/val))
     
     return np.mean(tmp_list)
@@ -103,7 +103,7 @@ def utils_evaluation_full_score(x,
         return [np.sqrt(np.mean((y_hat - y)**2)), np.mean(abs(y_hat - y)), np.mean(abs(y_hat - y)/(y + 1e-10))]      
     
             
-def gbt_n_estimatior(maxnum, 
+def gbt_n_estimatior(n_range, 
                      x_tr, 
                      y_tr, 
                      x_val, 
@@ -115,7 +115,7 @@ def gbt_n_estimatior(maxnum,
     
     best_val_err = 0.0 if bool_clf else np.inf 
     
-    for i in range(10,maxnum + 1,10):
+    for i in n_range:
         
         if bool_clf == False:
             
@@ -129,7 +129,8 @@ def gbt_n_estimatior(maxnum,
                                                max_depth = 3,
                                                max_features ='sqrt')
 
-        model.fit(x_tr, y_tr)
+        model.fit(x_tr, 
+                  y_tr)
         py_val = model.predict(x_val)
         
         if bool_clf == False:
@@ -148,7 +149,7 @@ def gbt_n_estimatior(maxnum,
         else:
             
             tmp_val_err = model.score(x_val, 
-                                    y_val)
+                                      y_val)
             
             hyper_para_log.append((i, tmp_val_err))
             
@@ -167,6 +168,7 @@ def gbt_n_estimatior(maxnum,
            best_model,\
            rmse(y = y_tr,
                 yhat = best_model.predict(x_tr))
+        
         
 def gbt_tree_para(x_tr, 
                   y_tr, 
@@ -204,7 +206,6 @@ def gbt_tree_para(x_tr,
             
             tmp_val_err = rmse(y = y_val, 
                                yhat = py_val)  
-            
             hyper_para_log.append((i, tmp_val_err))
             
             if tmp_val_err < best_val_err:
@@ -358,8 +359,8 @@ def gbt_train_validate(x_tr,
 # n_estimators
 # max_depth
 
-def rf_n_depth_estimatior(maxnum, 
-                          maxdep,
+def rf_n_depth_estimatior(n_range, 
+                          dep_range,
                           x_tr, 
                           y_tr, 
                           x_val, 
@@ -370,8 +371,8 @@ def rf_n_depth_estimatior(maxnum,
         
     best_val_err = 0.0 if bool_clf else np.inf 
 
-    for n_trial in range(10, maxnum + 1,10):
-        for dep_trial in range(2, maxdep + 1):
+    for n_trial in n_range:
+        for dep_trial in dep_range:
             
             if bool_clf == True:
                 model = RandomForestClassifier(n_estimators = n_trial, 
@@ -383,15 +384,15 @@ def rf_n_depth_estimatior(maxnum,
                                               max_depth = dep_trial,
                                               max_features = "sqrt")
             
-            model.fit(x_tr, y_tr)
+            model.fit(x_tr, 
+                      y_tr)
             py_val = model.predict(x_val)
             
             if bool_clf == False:
                 
+                # based on RMSE, changable
                 tmp_val_err = rmse(y = y_val, 
                                    yhat = py_val)
-                
-                #tmp_ts = sqrt(sum((pytest-ytest)*(pytest-ytest))/len(ytest))
                 
                 hyper_para_log.append((n_trial, dep_trial, tmp_val_err)) 
                 
@@ -405,7 +406,7 @@ def rf_n_depth_estimatior(maxnum,
             else:
                 
                 tmp_val_err = model.score(x_val, 
-                                        y_val)
+                                          y_val)
                 
                 hyper_para_log.append((n_trial, dep_trial, tmp_val_err))
             
@@ -465,6 +466,7 @@ def rf_train_validate(x_tr,
     # result_tuple [tree number, depth, [train error, validation error, [test error]]
     result_tuple = [n_err[0], n_err[1], [train_err, n_err[-1]]]
     
+    
     # ----- testing
     
     # save training prediction under the best model
@@ -483,7 +485,9 @@ def rf_train_validate(x_tr,
         
         result_tuple.append(None)
     
+    
     # -- output
+    
     print("\n number trees, depth, RMSE:", result_tuple)
     
     # log overall errors
@@ -1018,9 +1022,20 @@ def bayesian_reg_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result
 
 from sklearn.linear_model import Ridge
 
-def ridge_reg_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result_file, model_file, trans_ytrain, pred_file):
+
+
+def ridge_reg_train_validate(xtrain, 
+                             ytrain, 
+                             xval, 
+                             yval, 
+                             xtest, 
+                             ytest, 
+                             result_file, 
+                             model_file, 
+                             trans_ytrain, 
+                             pred_file):
     
-    print("\nStart to train Ridge Regression...")
+    print("\n Start to train Ridge Regression...")
     
     tmp_range = [0, 0.0001, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 1.5, 2]
     tmp_err = []
@@ -1031,18 +1046,25 @@ def ridge_reg_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result_fi
     for alpha_trial in tmp_range:
         
         if len(trans_ytrain) ==0:
-            clf = Ridge(alpha = alpha_trial, fit_intercept = True, normalize= True)
+            
+            clf = Ridge(alpha = alpha_trial, 
+                        fit_intercept = True, 
+                        normalize= True)
+            
             clf.fit(xtrain, ytrain)
         else:
-            clf = Ridge(alpha = alpha_trial, fit_intercept = True, normalize= True)
+            
+            clf = Ridge(alpha = alpha_trial, 
+                        fit_intercept = True, 
+                        normalize= True)
             clf.fit(xtrain, trans_ytrain)
         
         py = clf.predict( xval )
         
         if len(trans_ytrain) ==0:
-            tmp_val = sqrt(mean((py-yval)**2))
+            tmp_val = np.sqrt(np.mean((py-yval)**2))
         else:
-            tmp_val = sqrt(mean((exp(py)-yval)**2))
+            tmp_val = np.sqrt(np.mean((exp(py)-yval)**2))
         
         if tmp_val < best_err:
             
@@ -1051,14 +1073,17 @@ def ridge_reg_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result_fi
             best_l2 = alpha_trial
     
     # save training resutls under the best model
-    py = best_model.predict( xtrain )
+    py = best_model.predict(xtrain)
+    
     
     if len(trans_ytrain) ==0:
-        train_err = sqrt(mean((py-ytrain)**2))
-        np.savetxt(pred_file + "pytrain_ridge.txt", zip(ytrain, py), delimiter=',')
+        
+        train_err = np.sqrt(np.mean((py-ytrain)**2))
+        #np.savetxt(pred_file + "pytrain_ridge.txt", zip(ytrain, py), delimiter=',')
+    
     else:
         train_err = sqrt(mean((exp(py)-ytrain)**2))
-        np.savetxt(pred_file + "pytrain_ridge.txt", zip(ytrain, exp(py)), delimiter=',')
+        #np.savetxt(pred_file + "pytrain_ridge.txt", zip(ytrain, np.exp(py)), delimiter=',')
     
     # [ l2, train error, validation error, test error]
     result_tuple = [ best_l2, train_err, best_err ]
@@ -1069,23 +1094,25 @@ def ridge_reg_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result_fi
         py = best_model.predict( xtest )
         
         if len(trans_ytrain) == 0:
-            result_tuple.append( [sqrt(mean((py - ytest)**2)), mean(abs(py - ytest)),\
-                                  mean(abs(py - ytest)/(ytest+1e-10))] )
-            np.savetxt(pred_file + "pytest_ridge.txt", zip(ytest, py), delimiter=',')
+            result_tuple.append( [np.sqrt(np.mean((py - ytest)**2)), np.mean(abs(py - ytest)),\
+                                  np.mean(abs(py - ytest)/(ytest+1e-10))] )
+            #np.savetxt(pred_file + "pytest_ridge.txt", zip(ytest, py), delimiter=',')
         
         else:
-            result_tuple.append( sqrt(mean((exp(py)-ytest)*(exp(py)-ytest))) )
-            np.savetxt(pred_file + "pytest_ridge.txt", zip(ytest, exp(py)), delimiter=',')
+            result_tuple.append(np.sqrt(np.mean((exp(py)-ytest)*(exp(py)-ytest))) )
+            #np.savetxt(pred_file + "pytest_ridge.txt", zip(ytest, exp(py)), delimiter=',')
         
     else:
         
         py = best_model.predict( xval )
         
+        '''
         if len(trans_ytrain) == 0: 
             np.savetxt(pred_file + "pytest_ridge.txt", zip(yval, py), delimiter=',')
         else:
-            np.savetxt(pred_file + "pytest_ridge.txt", zip(yval, exp(py)), delimiter=',')
-            
+            np.savetxt(pred_file + "pytest_ridge.txt", zip(yval, np.exp(py)), delimiter=',')
+        '''
+        
         result_tuple.append( None )
         
     
