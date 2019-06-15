@@ -6,9 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn import tree
 from sklearn.ensemble import *
-#GradientBoostingRegressor
-from sklearn.ensemble import *
-#RandomForestRegressor
+
 from sklearn.metrics import precision_recall_fscore_support as score
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
@@ -161,7 +159,7 @@ def gbt_n_estimatior(n_range,
                 best_val_err = tmp_val_err
     
     
-    print("\n\n training log:", hyper_para_log)
+    print("\n\n Training log:", hyper_para_log)
     
     # the best pair of hyper-para and validataion errors, best model, training errors  
     return min(hyper_para_log, key = lambda x: x[1]) if bool_clf == False else max(hyper_para_log, key = lambda x: x[1]),\
@@ -230,7 +228,7 @@ def gbt_tree_para(x_tr,
                 best_val_err = tmp_val_err
                 
     
-    print("\n\n training log:", hyper_para_log)
+    print("\n\n Training log:", hyper_para_log)
     
     
     # the best pair of hyper-para and validataion errors, best model, training errors  
@@ -265,7 +263,7 @@ def gbt_train_validate(x_tr,
     
     # -- training and validation
     
-    print("\n Start to train GBT...")
+    print("\n ----- Start to train GBT...")
 
     fix_lr = 0.25
 
@@ -417,7 +415,7 @@ def rf_n_depth_estimatior(n_range,
                 
                     best_val_err = tmp_val_err
                     
-    print("\n\n training log:", hyper_para_log)
+    print("\n\n Training log:", hyper_para_log)
                                 
     return min(hyper_para_log, key = lambda x: x[2]) if bool_clf == False else max(hyper_para_log, key = lambda x: x[2]),\
            best_model,\
@@ -448,7 +446,7 @@ def rf_train_validate(x_tr,
     
     '''
     
-    print("\n Start to train Random Forest...")
+    print("\n ----- Start to train Random Forest...")
     
     # ----- training and validation
     
@@ -738,7 +736,7 @@ def xgt_train_validate(xtrain,
                        model_file, 
                        pred_file):
     
-    print("\nStart to train XGBoosted...")
+    print("\n ----- Start to train XGBoosted...")
     
     fix_lr = 0.2
 
@@ -752,7 +750,7 @@ def xgt_train_validate(xtrain,
                                                   bool_clf, 
                                                   num_class)
     
-    print(" depth, number of rounds, RMSE:", train_err0, n_depth_err)
+    print(" depth, number of steps, errors:", train_err0, n_depth_err)
 
     l2_err, model1, train_err1 = xgt_l2(fix_lr, 
                                         n_depth_err[0], 
@@ -765,7 +763,7 @@ def xgt_train_validate(xtrain,
                                         bool_clf, 
                                         num_class)
     
-    print(" l2, RMSE:", train_err1, l2_err)
+    print(" l2, errors:", train_err1, l2_err)
 
     
     # training performance
@@ -892,7 +890,7 @@ def elastic_net_train_validate(xtrain,
                                trans_ytrain, 
                                pred_file):
     
-    print("\nStart to train ElasticNet...")
+    print("\n ----- Start to train ElasticNet...")
     
     # training and validation phase
     alpha_range = [0, 0.001, 0.005, 0.01, 0.05, 0.1, 0.3, 0.5, 0.7, 0.9, 1]
@@ -953,7 +951,7 @@ from sklearn import linear_model
 
 def bayesian_reg_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result_file, model_file, trans_ytrain, pred_file):
     
-    print("\nStart to train Bayesian Regression...")
+    print("\n ----- Start to train Bayesian Regression...")
     
     if len(trans_ytrain) ==0:
         bayesian_reg = linear_model.BayesianRidge( normalize=True, fit_intercept=True )
@@ -966,36 +964,41 @@ def bayesian_reg_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result
     pyval = bayesian_reg.predict( xval )
     
     if len(trans_ytrain) ==0:
-        tmp_tr = sqrt(mean((pytrain-ytrain)*(pytrain-ytrain)))
-        tmp_val = sqrt(mean((pyval-yval)**2))
+        tmp_tr = np.sqrt(np.mean((pytrain-ytrain)*(pytrain-ytrain)))
+        tmp_val = np.sqrt(np.mean((pyval-yval)**2))
     else:
-        tmp_tr = sqrt(mean((exp(pytrain)-ytrain)*(exp(pytrain)-ytrain)))
-        tmp_val = sqrt(mean((exp(pyval)-yval)**2))
+        tmp_tr = np.sqrt(np.mean((exp(pytrain)-ytrain)*(exp(pytrain)-ytrain)))
+        tmp_val = np.sqrt(np.mean((exp(pyval)-yval)**2))
     
     # [train error, validation error, test error]
     result_tuple = [ tmp_tr, tmp_val ]
     
+    '''
     # save training prediction under the best model
     if len(trans_ytrain) ==0:
         np.savetxt(pred_file + "pytrain_bayes.txt", zip(ytrain, pytrain), delimiter=',')
     else:
         np.savetxt(pred_file + "pytrain_bayes.txt", zip(ytrain, exp(pytrain)), delimiter=',')
+    '''    
+    # save testing prediction under the best model
+    #if len(xtest) != 0:
+        
+    py = bayesian_reg.predict( xtest )
         
     # save testing prediction under the best model
-    if len(xtest) != 0:
+    #if len(trans_ytrain) ==0:
         
-        py = bayesian_reg.predict( xtest )
-        
-        # save testing prediction under the best model
-        if len(trans_ytrain) ==0:
-            result_tuple.append( [sqrt(mean((py - ytest)**2)), mean(abs(py - ytest)),\
-                                 mean(abs(py - ytest)/(ytest+1e-10))] )
-            np.savetxt(pred_file + "pytest_bayes.txt", zip(ytest, py), delimiter=',')
+    result_tuple.append( [np.sqrt(np.mean((py - ytest)**2)), np.mean(abs(py - ytest)),\
+                                 np.mean(abs(py - ytest)/(ytest+1e-10))] )
+    #np.savetxt(pred_file + "pytest_bayes.txt", zip(ytest, py), delimiter=',')
             
-        else:
-            result_tuple.append( sqrt(mean((exp(py)-ytest)**2)) )
-            np.savetxt(pred_file + "pytest_bayes.txt", zip(ytest, exp(py)), delimiter=',')
+    #else:
+    
+    #result_tuple.append( np.sqrt(np.mean((exp(py)-ytest)**2)) )
+    #    np.savetxt(pred_file + "pytest_bayes.txt", zip(ytest, exp(py)), delimiter=',')
             
+    
+    '''
     else:
         result_tuple.append(None)
         
@@ -1003,6 +1006,8 @@ def bayesian_reg_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result
             np.savetxt(pred_file + "pytest_bayes.txt", zip(yval, py), delimiter=',')
         else:
             np.savetxt(pred_file + "pytest_bayes.txt", zip(yval, exp(py)), delimiter=',')
+    
+    '''
     
     # save the best model
     joblib.dump(bayesian_reg, model_file)
@@ -1035,7 +1040,7 @@ def ridge_reg_train_validate(xtrain,
                              trans_ytrain, 
                              pred_file):
     
-    print("\n Start to train Ridge Regression...")
+    print("\n ----- Start to train Ridge Regression...")
     
     tmp_range = [0, 0.0001, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 1.5, 2]
     tmp_err = []
@@ -1120,11 +1125,11 @@ def ridge_reg_train_validate(xtrain,
     joblib.dump(best_model, model_file)
     
     # output 
-    print("Ridge RMSE: ", result_tuple)
+    print("\n Ridge RMSE: ", result_tuple)
     
     # log the overall errors
     with open(result_file, "a") as text_file:
-        text_file.write( "Ridge regression: %s \n"%( str(result_tuple) ) )
+        text_file.write("Ridge regression: %s \n"%(str(result_tuple)))
     
     # return the least validation error 
     return result_tuple
@@ -1136,7 +1141,7 @@ from sklearn.gaussian_process.kernels import *
 
 def gp_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result_file, model_file, trans_ytrain, pred_file):
     
-    print("\nStart to train Gaussian process...")
+    print("\n ----- Start to train Gaussian process...")
     
     # specify dimension-specific length-scale parameter
     kernel = 1.0*RBF(length_scale=41.8) + 1.0*RBF(length_scale=180) * ExpSineSquared(length_scale=1.44, periodicity=1) \
@@ -1200,7 +1205,7 @@ from sklearn import linear_model
 
 def lasso_train_validate(xtrain, ytrain, xval, yval, xtest, ytest, result_file, model_file, trans_ytrain, pred_file):
     
-    print("\nStart to train Lasso regression...")
+    print("\n ----- Start to train Lasso regression...")
     
     tmp_range = [0, 0.0001, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 1.5, 2, 4, 6]
     tmp_err = []

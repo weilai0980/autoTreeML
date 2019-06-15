@@ -1,9 +1,8 @@
 
 # data processing packages
-import numpy as np   
+
 import pandas as pd 
 from pandas import *
-from numpy import *
 
 import scipy as sp
 from scipy import signal
@@ -23,6 +22,6 @@ from sklearn.externals import joblib
 from sklearn.decomposition import *
 
 import datetime
-import requests
 
-import glob, os
+#import requests
+#import glob, os
