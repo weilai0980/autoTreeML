@@ -15,11 +15,36 @@ path_model = "../results/vol/"
 path_pred = "../results/vol/"
 bool_clf = False
 
-path_data = "../dataset/bitcoin/double_trx_ob_tar15_len10/"
+path_data = "../dataset/bitcoin/double_trx_ob_tar5_len10/"
 
-model_list = ['bayes']
-# 'rf', 'gbt'
+model_list = ['gbt']
 # 'gbt', 'rf', 'xgt', 'gp', 'bayes', 'enet', 'ridge', 'lasso', 'ewma'
+
+
+gbt_hyper_para_dict = {"n_steps": list(range(10, 80, 5)),
+                       "n_depth": list(range(3, 8)), 
+                       "loss": "ls",
+                       "max_features": "auto",
+                       "learning_rate": 0.25 }
+
+'''
+loss : 
+    ‘ls’, ‘lad’, ‘huber’, ‘quantile’
+    
+max_features :
+    int, then consider max_features features at each split.
+    float, then max_features is a fraction and int(max_features * n_features) features are considered at each split.
+    “auto”, then max_features = n_features.
+    “sqrt”, then max_features = sqrt(n_features).
+    “log2”, then max_features = log2(n_features).
+    None, then max_features = n_features.
+   
+'''    
+    
+
+rf_hyper_para_dict = {"n_trees": list(range(10, 100, 5)),
+                      "n_depth": list(range(3, 15))}
+
 
 
 # -----
@@ -137,9 +162,6 @@ def train_eval_models(xtrain,
     
     # -- GBT gradient boosted tree
     
-    hyper_para_dict = {"n_steps": list(range(10, 80, 10)),
-                       "n_depth": list(range(3, 8))}
-    
     if 'gbt' in model_list:
         tmperr = gbt_train_validate(xtrain,
                                     ytrain,
@@ -147,19 +169,15 @@ def train_eval_models(xtrain,
                                     yval,
                                     xtest,
                                     ytest,
-                                    0.0,
                                     bool_clf,
                                     path_result,
                                     path_model + '_gbt.sav',
                                     path_pred,
-                                    hyper_para_dict = hyper_para_dict)
+                                    hyper_para_dict = gbt_hyper_para_dict)
         best_err_ts.append(tmperr)
         
     
     # -- Random forest
-    
-    hyper_para_dict = {"n_trees": list(range(10, 100, 10)),
-                       "n_depth": list(range(3, 15))}
     
     if 'rf' in model_list:
         tmperr = rf_train_validate(xtrain,
@@ -172,7 +190,7 @@ def train_eval_models(xtrain,
                                    path_result,
                                    path_model + '_rf.sav',
                                    path_pred,
-                                   hyper_para_dict = hyper_para_dict)
+                                   hyper_para_dict = rf_hyper_para_dict)
         best_err_ts.append(tmperr)
         
     
@@ -198,6 +216,7 @@ def train_eval_models(xtrain,
     return best_err_ts
 
 
+# to shape: x [S N T D], y [N 1]
 def data_reshape(data):
     
     # data: [yi, ti, [xi_src1, xi_src2, ...]]
@@ -216,6 +235,7 @@ def data_reshape(data):
     return tmpx, np.expand_dims(tmpy, -1)
 
 
+'''
 def test_reshape(data):
     
     # data: [yi, ti, [xi_src1, xi_src2, ...]]
@@ -242,7 +262,7 @@ def test_reshape(data):
     
     # output shape: x [S N T D], y [N 1]
     return tmpx, np.expand_dims(tmpy, -1)
-
+'''
 
 def flatten_multi_source_x(x):
     # x [S N T D]

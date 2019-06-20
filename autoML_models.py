@@ -14,6 +14,8 @@ from sklearn.externals import joblib
 
 import xgboost as xgb
 
+import copy
+
 # ----- Utility functions
 
 def mape(y, 
@@ -66,7 +68,7 @@ def utils_result_comparison(res1,
                             bool_clf):
     
     # clf: accuracy, regression: error
-    if bool_clf:
+    if bool_clf == True:
         return True if res1>res2 else False
     else:
         return True if res1<res2 else False
@@ -101,55 +103,61 @@ def utils_evaluation_full_score(x,
         return [np.sqrt(np.mean((y_hat - y)**2)), np.mean(abs(y_hat - y)), np.mean(abs(y_hat - y)/(y + 1e-10))]      
     
             
-def gbt_n_estimatior(n_range, 
-                     x_tr, 
+def gbt_n_estimatior(x_tr, 
                      y_tr, 
                      x_val, 
                      y_val, 
-                     fix_lr, 
-                     bool_clf):
+                     bool_clf,
+                     hyper_para):
     
     hyper_para_log = []
     
     best_val_err = 0.0 if bool_clf else np.inf 
     
-    for i in n_range:
+    
+    for tmp_n in hyper_para["n_steps"]:
         
         if bool_clf == False:
             
-            model = GradientBoostingRegressor(n_estimators = i,
-                                              learning_rate = fix_lr,
+            model = GradientBoostingRegressor(n_estimators = tmp_n,
+                                              learning_rate = hyper_para["learning_rate"],
                                               max_depth = 3,
-                                              max_features ='sqrt')
+                                              max_features = hyper_para['max_features'],
+                                              loss = hyper_para["loss"])
         else:
-            model = GradientBoostingClassifier(n_estimators = i,
-                                               learning_rate = fix_lr,
+            model = GradientBoostingClassifier(n_estimators = tmp_n,
+                                               learning_rate = hyper_para["learning_rate"],
                                                max_depth = 3,
-                                               max_features ='sqrt')
+                                               max_features = hyper_para['max_features'],
+                                               loss = hyper_para["loss"])
 
         model.fit(x_tr, 
                   y_tr)
+        
         py_val = model.predict(x_val)
         
+        # regression
         if bool_clf == False:
             
+            # rmse as the validation error metric
             tmp_val_err = rmse(y = y_val, 
-                               yhat = py_val) 
-
-            hyper_para_log.append((i, tmp_val_err))
+                               yhat = py_val)
+            
+            hyper_para_log.append((tmp_n, tmp_val_err))
             
             if tmp_val_err < best_val_err:
                 
-                best_py_val = py_val
-                best_model  = model
-                
                 best_val_err = tmp_val_err
+                best_model = model
+                
+        # classification       
         else:
             
+            '''
             tmp_val_err = model.score(x_val, 
                                       y_val)
             
-            hyper_para_log.append((i, tmp_val_err))
+            hyper_para_log.append((tmp_n, tmp_val_err))
             
             if tmp_val_err > best_val_err:
                 
@@ -157,12 +165,16 @@ def gbt_n_estimatior(n_range,
                 best_model  = model
                 
                 best_val_err = tmp_val_err
-    
+                
+            '''
     
     print("\n\n Training log:", hyper_para_log)
     
+    best_hp_err = min(hyper_para_log, key = lambda x:x[1]) if bool_clf == False else max(hyper_para_log, key = lambda x:x[1])
+    hyper_para["n_steps"] = best_hp_err[0]
+    
     # the best pair of hyper-para and validataion errors, best model, training errors  
-    return min(hyper_para_log, key = lambda x: x[1]) if bool_clf == False else max(hyper_para_log, key = lambda x: x[1]),\
+    return best_hp_err,\
            best_model,\
            rmse(y = y_tr,
                 yhat = best_model.predict(x_tr))
@@ -172,29 +184,30 @@ def gbt_tree_para(x_tr,
                   y_tr, 
                   x_val, 
                   y_val, 
-                  depth_range, 
-                  fix_lr, 
-                  fix_n_est, 
-                  bool_clf):
+                  bool_clf,
+                  hyper_para):
     
     # depth: hyper parameter 
     hyper_para_log = []
     
     best_val_err = 0.0 if bool_clf else np.inf 
     
-    for i in depth_range:
+    for tmp_depth in hyper_para["n_depth"]:
         
         if bool_clf == False:
             
-            model = GradientBoostingRegressor(n_estimators = fix_n_est, 
-                                              learning_rate = fix_lr,
-                                              max_depth = i,
-                                              max_features ='sqrt')
+            model = GradientBoostingRegressor(n_estimators = hyper_para["n_steps"], 
+                                              learning_rate = hyper_para["learning_rate"],
+                                              max_depth = tmp_depth,
+                                              max_features = hyper_para["max_features"],
+                                              loss = hyper_para["loss"])
         else:
-            model = GradientBoostingClassifier(n_estimators = fix_n_est,
-                                               learning_rate = fix_lr,
-                                               max_depth = i,
-                                               max_features ='sqrt')
+            
+            model = GradientBoostingClassifier(n_estimators = hyper_para["n_steps"], 
+                                               learning_rate = hyper_para["learning_rate"],
+                                               max_depth = tmp_depth,
+                                               max_features = hyper_para["max_features"],
+                                               loss = hyper_para["loss"])
             
         model.fit(x_tr, y_tr)
         py_val = model.predict(x_val)
@@ -202,40 +215,43 @@ def gbt_tree_para(x_tr,
         # regression
         if bool_clf == False:
             
+            # rmse as the validation error metric
             tmp_val_err = rmse(y = y_val, 
                                yhat = py_val)  
-            hyper_para_log.append((i, tmp_val_err))
+            
+            hyper_para_log.append((tmp_depth, tmp_val_err))
             
             if tmp_val_err < best_val_err:
                 
-                best_py_val = py_val
-                best_model  = model
-                
-                best_val_err = tmp_val_err
+                best_val_err = tmp_val_err                
+                best_model = model
                 
         # classification
         else:
-            
+            '''
             tmp_val_err = model.score(x_val, 
                                       y_val)
-            hyper_para_log.append((i, tmp_val_err))
+            hyper_para_log.append((tmp_depth, tmp_val_err))
             
             if tmp_val_err > best_val_err:
                 
                 best_py_val = py_val
-                best_model  = model
-                
                 best_val_err = tmp_val_err
                 
+                best_model  = model
+            '''
     
     print("\n\n Training log:", hyper_para_log)
     
+    best_hp_err = min(hyper_para_log, key=lambda x:x[1]) if bool_clf == False else max(hyper_para_log, key=lambda x:x[1])
+    hyper_para["n_depth"] = best_hp_err[0]
     
     # the best pair of hyper-para and validataion errors, best model, training errors  
-    return min(hyper_para_log, key = lambda x: x[1]) if bool_clf == False else max(hyper_para_log, key = lambda x: x[1]),\
+    return best_hp_err,\
            best_model,\
            rmse(y = y_tr,
                 yhat = best_model.predict(x_tr))
+        
     
 def gbt_train_validate(x_tr, 
                        y_tr, 
@@ -243,7 +259,6 @@ def gbt_train_validate(x_tr,
                        y_val, 
                        x_test, 
                        y_test, 
-                       fix_lr, 
                        bool_clf, 
                        path_result, 
                        path_model, 
@@ -257,23 +272,25 @@ def gbt_train_validate(x_tr,
     shape of y: [N, ]
     
     hyper_para_dict: {"n_steps": ..., 
-                      "n_depth": ...}
+                      "n_depth": ...,
+                      ..., }
     
     '''
+    
+    hyper_para_copy = copy.deepcopy(hyper_para_dict)
+
     
     # -- training and validation
     
     print("\n ----- Start to train GBT...")
 
-    fix_lr = 0.25
-
-    n_err, model0, train_err0 = gbt_n_estimatior(hyper_para_dict["n_steps"], 
-                                                 x_tr, 
-                                                 y_tr, 
-                                                 x_val, 
-                                                 y_val, 
-                                                 fix_lr, 
-                                                 bool_clf)
+    n_err, model0, train_err0 = gbt_n_estimatior(x_tr,
+                                                 y_tr,
+                                                 x_val,
+                                                 y_val,
+                                                 bool_clf,
+                                                 hyper_para = hyper_para_copy)
+    
     print("\n n_estimator, training and validation errors: ", train_err0, n_err)
 
     
@@ -281,14 +298,16 @@ def gbt_train_validate(x_tr,
                                                   y_tr, 
                                                   x_val, 
                                                   y_val,
-                                                  hyper_para_dict["n_depth"],
-                                                  fix_lr, 
-                                                  n_err[0], 
-                                                  bool_clf)
+                                                  bool_clf,
+                                                  hyper_para = hyper_para_copy)
+    
     print("\n depth, training and validation errors: ", train_err1, depth_err)
     
     # training performance
     best_train_err = min(train_err0, train_err1) if bool_clf == False else max(train_err0, train_err1)  
+    
+    
+    print("\n hyper-parameters: ", hyper_para_copy)
     
     # -- hyper-parameter selection 
     
@@ -304,7 +323,8 @@ def gbt_train_validate(x_tr,
         best_model = model0
         best_val_err = n_err[1]
         
-        # result_tuple [ # iteration, depth, train error, validation error, test error ]
+        # result_tuple [ #iteration, depth, [train error, validation error], [test errors] ]
+        
         # hyper-parameters: depth = 3 has the best validation error
         result_tuple = [n_err[0], 3, [best_train_err, best_val_err]]
         
@@ -320,31 +340,33 @@ def gbt_train_validate(x_tr,
         # hyper-parameters with the best validation error 
         result_tuple = [n_err[0], depth_err[0], [best_train_err, best_val_err]]
     
+    
     # -- testing
     
     # save training prediction under the best model
     py = best_model.predict(x_tr)
-    np.savetxt(path_pred + "pytrain_gbt.txt", list(zip(y_tr, py)), delimiter=',')
+    np.savetxt(path_pred + "pytrain_gbt.txt", list(zip(y_tr, py)), delimiter = ',')
     
     # save testing prediction under the best model
     if len(x_test) != 0:
         
         py = best_model.predict(x_test)
-        np.savetxt(path_pred + "pytest_gbt.txt", list(zip(y_test, py)), delimiter=',')
+        np.savetxt(path_pred + "pytest_gbt.txt", list(zip(y_test, py)), delimiter = ',')
             
-        result_tuple[-1].append(utils_evaluation_full_score(x_test, 
-                                                            y_test, 
-                                                            bool_clf, 
-                                                            best_model))
-    
+        result_tuple.append(utils_evaluation_full_score(x_test, 
+                                                        y_test, 
+                                                        bool_clf, 
+                                                        best_model))
     else:
-        result_tuple[-1].append(None)
+        result_tuple.append(None)
     
     # log overall errors 
     with open(path_result, "a") as text_env:
-        text_env.write("GBT: %s \n" %(str(result_tuple)))
+        
+        text_env.write("-- GBT: \n %s \n" %(str(hyper_para_dict)))
+        text_env.write("     %s \n\n" %(str(result_tuple)))
     
-    # result_tuple [ #iteration, depth, [train error, validation error], [test error] ]
+    # result_tuple [ #iteration, depth, [train error, validation error], [test errors] ]
     return result_tuple
     
 
