@@ -15,9 +15,9 @@ path_model = "../results/vol/"
 path_pred = "../results/vol/"
 bool_clf = False
 
-path_data = "../dataset/bitcoin/double_trx_ob_tar5_len10/"
+path_data = "../dataset/bitcoin/market2_tar5_len10_auto/"
 
-model_list = ['gbt']
+model_list = ['gbt', 'rf']
 # 'gbt', 'rf', 'xgt', 'gp', 'bayes', 'enet', 'ridge', 'lasso', 'ewma'
 
 
@@ -44,6 +44,11 @@ max_features :
 
 rf_hyper_para_dict = {"n_trees": list(range(10, 100, 5)),
                       "n_depth": list(range(3, 15))}
+
+
+
+#gbt_hyper_para_dict = {"n_trees": list(range(10, 100, 5)),
+#                      "n_depth": list(range(3, 15))}
 
 
 
@@ -325,6 +330,13 @@ if __name__ == '__main__':
     print(np.shape(tr_x), np.shape(tr_y))
     print(np.shape(val_x), np.shape(val_y))
     print(np.shape(ts_x), np.shape(ts_y))
+    
+    
+    
+    # save the overall errors
+    with open(path_result, "a") as text_file:
+        text_file.write( "\n----- %s, \n"%(path_data))
+        
         
     # ----- train, validate and test models
     tmp_errors = train_eval_models(tr_x, 
