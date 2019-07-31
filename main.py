@@ -15,7 +15,7 @@ path_model = "../results/vol/"
 path_pred = "../results/vol/"
 bool_clf = False
 
-path_data = "../dataset/bitcoin/market2_tar5_len10_auto/"
+path_data = "../dataset/bitcoin/market2_tar5_len10/"
 
 model_list = ['gbt', 'rf']
 # 'gbt', 'rf', 'xgt', 'gp', 'bayes', 'enet', 'ridge', 'lasso', 'ewma'
@@ -23,7 +23,7 @@ model_list = ['gbt', 'rf']
 
 gbt_hyper_para_dict = {"n_steps": list(range(10, 80, 5)),
                        "n_depth": list(range(3, 8)), 
-                       "loss": "ls",
+                       "loss": "ls",  
                        "max_features": "auto",
                        "learning_rate": 0.25 }
 
@@ -47,8 +47,8 @@ rf_hyper_para_dict = {"n_trees": list(range(10, 100, 5)),
 
 
 
-#gbt_hyper_para_dict = {"n_trees": list(range(10, 100, 5)),
-#                      "n_depth": list(range(3, 15))}
+xgt_hyper_para_dict = {"n_trees": list(range(10, 100, 5)),
+                      "n_depth": list(range(3, 15))}
 
 
 
